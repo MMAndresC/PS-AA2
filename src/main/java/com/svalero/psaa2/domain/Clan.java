@@ -15,6 +15,8 @@ public class Clan {
 
     private int clanLevel;
 
+    private String warFrequency;
+
     private int warWinStreak;
 
     private int warWins;
@@ -36,8 +38,6 @@ public class Clan {
     private boolean isFamilyFriendly;
 
     private boolean isWarLogPublic;
-
-    private String warFrequency;
 
     private int warLosses;
 
