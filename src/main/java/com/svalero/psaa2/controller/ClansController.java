@@ -14,7 +14,6 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 
 import java.net.URL;
-import java.util.List;
 import java.util.ResourceBundle;
 
 public class ClansController implements Initializable {
@@ -22,14 +21,11 @@ public class ClansController implements Initializable {
     @FXML
     private TabPane tabPane;
 
-    private final ObservableList<Clan> observableData = FXCollections.observableArrayList();
-
     @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-
-    }
+    public void initialize(URL url, ResourceBundle resourceBundle) {}
 
     public void onClickSearchClans(){
+        ObservableList<Clan> observableData = FXCollections.observableArrayList();
         // Create new tab with table
         createClanTableView(observableData);
         //Init task
