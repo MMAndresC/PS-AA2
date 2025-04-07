@@ -1,7 +1,9 @@
 package com.svalero.psaa2.task;
 
+import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.service.ClanService;
+import com.svalero.psaa2.utils.ErrorLogger;
 import io.reactivex.rxjava3.functions.Consumer;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -9,28 +11,25 @@ import javafx.concurrent.Task;
 
 public class GetClansApiTask extends Task<Void> {
 
-    private final String warFrequency;
     private final ObservableList<Clan> requestedData;
 
-    public GetClansApiTask(String warFrequency, ObservableList<Clan> requestedData){
-        this.warFrequency = warFrequency;
+    public GetClansApiTask(ObservableList<Clan> requestedData){
         this.requestedData = requestedData;
     }
     @Override
     protected Void call() throws Exception {
-        ClanService clanService = new ClanService(this.warFrequency);
+        ClanService clanService = new ClanService(Constants.LOCATION_ID_SPAIN);
         Consumer<Clan> consumer = (clan -> {
             System.out.println("Data received: " + clan);
-            //Simular retardo para testear concurrencia
+            //Space out sending of clans
             Thread.sleep(100);
             Platform.runLater(() -> this.requestedData.add(clan));
         });
 
-        //Subscribir el consumer al observable para que le lleguen los datos
+        //Subscribe consumer to observable
         clanService.getClans().subscribe(consumer, throwable -> {
             System.err.println("Error receiving data: " + throwable.getMessage());
-            //TODO ver como poner esto para que le llegue al controller cuando controle los estados de la task
-            throwable.printStackTrace();
+            ErrorLogger.log(throwable.getMessage());
         });
         return null;
     }

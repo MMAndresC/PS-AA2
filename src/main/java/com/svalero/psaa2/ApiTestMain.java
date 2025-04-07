@@ -1,5 +1,6 @@
 package com.svalero.psaa2;
 
+import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.service.ClanService;
 import io.reactivex.rxjava3.functions.Consumer;
@@ -10,8 +11,8 @@ public class ApiTestMain {
 
     public static void main(String[] args) {
 
-        String warFrequency = "always";
-        ClanService clanService = new ClanService(warFrequency);
+        int locationId = Constants.LOCATION_ID_SPAIN;
+        ClanService clanService = new ClanService(locationId);
 
         //Evitar que se cierre el programa antes de que termine de recepcionar los datos de la aoi
         CountDownLatch latch = new CountDownLatch(1);

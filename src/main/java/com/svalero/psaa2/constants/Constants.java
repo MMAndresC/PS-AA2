@@ -8,7 +8,9 @@ import java.util.List;
 public class Constants {
 
     public static final String BASE_URL = "https://api.clashofclans.com/v1/";
-    public final static int LIMIT = 50;
+    public final static int LIMIT = 60; //Max de la API 60
+
+    public final static int LOCATION_ID_SPAIN = 32000218;
 
     public final static List<WarFrequencyStructure> WAR_FRECUENCY = List.of(
             new WarFrequencyStructure("unknown", "Desconocido"),

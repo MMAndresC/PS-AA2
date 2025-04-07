@@ -10,8 +10,7 @@ public interface ClashOfClansApiInterface {
 
     @GET("clans")
     Single<ApiResponse> getClansByWarFrequency(
-            @Header("Authorization") String token,
-            @Query("warFrequency") String warFrequency,
+            @Query("locationId") int locationId,
             @Query("limit") int limit
     );
 }
