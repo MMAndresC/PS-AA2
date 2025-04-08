@@ -1,7 +1,5 @@
 package com.svalero.psaa2.constants;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 import java.util.List;
 
@@ -13,6 +11,7 @@ public class Constants {
     public final static int LOCATION_ID_SPAIN = 32000218;
 
     public final static List<WarFrequencyStructure> WAR_FRECUENCY = List.of(
+            new WarFrequencyStructure("noSelect", "Seleccionar frecuencia"),
             new WarFrequencyStructure("unknown", "Desconocido"),
             new WarFrequencyStructure("always", "Siempre"),
             new WarFrequencyStructure("moreThanOncePerWeek", "Más que una vez por semana"),
@@ -20,11 +19,4 @@ public class Constants {
             new WarFrequencyStructure("lessThanOncePerWeek", "Menos que una vez por semana"),
             new WarFrequencyStructure("never", "Nunca")
     );
-
-    @Getter
-    @AllArgsConstructor
-    public static class WarFrequencyStructure{
-        private final String value;
-        private final String translate;
-    }
 }

@@ -9,6 +9,8 @@ import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 
+import java.util.concurrent.CountDownLatch;
+
 public class GetClansApiTask extends Task<Void> {
 
     private final ObservableList<Clan> requestedData;
@@ -16,9 +18,14 @@ public class GetClansApiTask extends Task<Void> {
     public GetClansApiTask(ObservableList<Clan> requestedData){
         this.requestedData = requestedData;
     }
+
     @Override
     protected Void call() throws Exception {
         ClanService clanService = new ClanService(Constants.LOCATION_ID_SPAIN);
+
+        // Include it to synchronize Observer with Task, task end before observer
+        CountDownLatch latch = new CountDownLatch(1);
+
         Consumer<Clan> consumer = (clan -> {
             System.out.println("Data received: " + clan);
             //Space out sending of clans
@@ -30,7 +37,14 @@ public class GetClansApiTask extends Task<Void> {
         clanService.getClans().subscribe(consumer, throwable -> {
             System.err.println("Error receiving data: " + throwable.getMessage());
             ErrorLogger.log(throwable.getMessage());
+            latch.countDown(); //Error, end task, unlatch
+        }, () -> {
+            System.out.println("End sending");
+            latch.countDown(); // End sending, end task, unlatch
         });
+
+        //Stand by until resolve or error
+        latch.await();
         return null;
     }
 }

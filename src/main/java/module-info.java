@@ -19,5 +19,7 @@ module com.svalero.psaa2 {
     opens com.svalero.psaa2 to javafx.fxml;
     exports com.svalero.psaa2;
     exports com.svalero.psaa2.controller;
+    exports com.svalero.psaa2.domain;
+    exports com.svalero.psaa2.constants;
     opens com.svalero.psaa2.controller to javafx.fxml;
 }

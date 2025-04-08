@@ -1,5 +1,7 @@
 package com.svalero.psaa2.controller;
 
+import com.svalero.psaa2.constants.Constants;
+import com.svalero.psaa2.constants.WarFrequencyStructure;
 import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.domain.Location;
 import com.svalero.psaa2.task.GetClansApiTask;
@@ -9,10 +11,16 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -22,19 +30,26 @@ public class ClanController implements Initializable {
     @FXML
     private TabPane tabPane;
 
+    private String LABEL_CLANS = "Clanes";
+
+    private String LABEL_LOCATIONS = "Locations";
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
 
     public void onClickGetClans(){
         ObservableList<Clan> observableData = FXCollections.observableArrayList();
-        // Create new tab with table
-        createClanTableView(observableData);
+        // Create new table
+        TableView<Clan> tableView = createClanTableView(observableData);
+        tableView.setItems(observableData);
+        // Create new tab
+        Tab tab = createNewTab(tableView, LABEL_CLANS);
         //Init task
         GetClansApiTask task = new GetClansApiTask(observableData);
         //Init thread
         Thread thread = new Thread(task);
         // Control states of task
-        controlFailedClanTask(task);
+        controlStatesClanTask(task, observableData, tableView, tab);
         //Close thread if app closes
         thread.setDaemon(true);
         thread.start();
@@ -42,64 +57,124 @@ public class ClanController implements Initializable {
 
     public void onClickGetLocations(){
         ObservableList<Location> observableData = FXCollections.observableArrayList();
-        // Create new tab with table
-        createLocationTableView(observableData);
+        // Create new table
+        TableView<Location> tableView = createLocationTableView(observableData);
+        tableView.setItems(observableData);
+        // Create new tab
+        Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
         //Init task
         GetLocationsApiTask task = new GetLocationsApiTask(observableData);
         //Init thread
         Thread thread = new Thread(task);
         // Control states of task
-        controlFailedLocationTask(task);
+        controlStatesLocationTask(task, observableData, tableView, tab);
         //Close thread if app closes
         thread.setDaemon(true);
         thread.start();
     }
 
-    private void controlFailedClanTask(GetClansApiTask task){
+    private void controlStatesClanTask(
+            GetClansApiTask task,
+            ObservableList<Clan> observableData,
+            TableView<Clan> tableView,
+            Tab tab
+    ){
+        task.setOnSucceeded(event -> {
+            System.out.println("Succeeded");
+            tab.setText(LABEL_CLANS + " ✅");
+            // Set active search and filter
+            HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
+            for( Node component : searchFilterBar.getChildren()){
+                component.setDisable(false);
+            }
+            TextField input = (TextField) searchFilterBar.getChildren().getFirst();
+            // Filter
+            FilteredList<Clan> filteredData = new FilteredList<>(observableData, p -> true);
+            input.textProperty().addListener((obs, oldValue, newValue) -> {
+                filteredData.setPredicate(item -> {
+                    if (newValue == null || newValue.isEmpty()) return true;
+
+                    String lowerCaseFilter = newValue.toLowerCase();
+
+                    return item.getName().toLowerCase().contains(lowerCaseFilter) ||
+                            item.getTag().toLowerCase().contains(lowerCaseFilter);
+                });
+            });
+
+            // Enlaza la tabla con la lista filtrada
+            tableView.setItems(filteredData);
+        });
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing clans");
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setHeaderText("Notificacion");
-            alert.setContentText("Error listando los clanes");
-            alert.show();
+            tab.setText(LABEL_CLANS + " ⛔");
         });
     }
 
-    private void controlFailedLocationTask(GetLocationsApiTask task){
+    private void controlStatesLocationTask(
+            GetLocationsApiTask task,
+            ObservableList<Location> observableData,
+            TableView<Location> tableView,
+            Tab tab
+    ){
+        task.setOnSucceeded(event -> {
+            System.out.println("Succeeded");
+            tab.setText(LABEL_LOCATIONS + " ✅");
+            // Set active search and filter
+            HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
+            for( Node component : searchFilterBar.getChildren()){
+                component.setDisable(false);
+            }
+            TextField input = (TextField) searchFilterBar.getChildren().getFirst();
+            // Filter
+            FilteredList<Location> filteredData = new FilteredList<>(observableData, p -> true);
+            input.textProperty().addListener((obs, oldValue, newValue) -> {
+                filteredData.setPredicate(item -> {
+                    if (newValue == null || newValue.isEmpty()) return true;
+
+                    String lowerCaseFilter = newValue.toLowerCase();
+
+                    return item.getName().toLowerCase().contains(lowerCaseFilter) ||
+                            (
+                                item.getCountryCode() != null &&
+                                item.getCountryCode().toLowerCase().contains(lowerCaseFilter)
+                            );
+                });
+            });
+
+            // Enlaza la tabla con la lista filtrada
+            tableView.setItems(filteredData);
+        });
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing locations");
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setHeaderText("Notificacion");
-            alert.setContentText("Error listando las localizaciones");
-            alert.show();
+            tab.setText(LABEL_LOCATIONS + " ⛔");
         });
     }
 
     //Generic type T to wrap both types of tableView
-    public <T> void createNewTab(TableView<T> tableView, String label) {
+    public <T> Tab createNewTab(TableView<T> tableView, String label) {
         ScrollPane scrollPane = new ScrollPane(tableView);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
-        scrollPane.setPrefSize(Double.MAX_VALUE, Double.MAX_VALUE);
         scrollPane.setPadding(new Insets(0, 0, 10, 10));
 
-        Tab tab = new Tab(label);
+        Tab tab = new Tab(label + " ⌛");
 
-        try{
-            //Add new tab
-            tab.setContent(scrollPane);
-            tabPane.getTabs().add(tab);
-            // Focus on new tab
-            tabPane.getSelectionModel().select(tab);
-        }catch(Exception e){
-            System.out.println(e.getMessage());
-            ErrorLogger.log(e.getMessage());
-        }
+        HBox searchFilterBar = createSearchAndFilter();
+        VBox container = new VBox(10,searchFilterBar, scrollPane);
+        // Set components attributes to growth to expand all height
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        tableView.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        //Add new tab
+        tab.setContent(container);
+        tabPane.getTabs().add(tab);
+        // Focus on new tab
+        tabPane.getSelectionModel().select(tab);
+        return tab;
     }
 
-    private void createLocationTableView(ObservableList<Location> observableLocations){
+    private TableView<Location> createLocationTableView(ObservableList<Location> observableLocations){
         TableView<Location> tableView = new TableView<>();
 
         TableColumn<Location, Integer> idColumn = new TableColumn<>("ID");
@@ -119,12 +194,10 @@ public class ClanController implements Initializable {
         tableView.getColumns().add(isCountryColumn);
         tableView.getColumns().add(countryCodeColumn);
 
-        tableView.setItems(observableLocations);
-
-        createNewTab(tableView, "Localizaciones");
+       return tableView;
     }
 
-    private void createClanTableView(ObservableList<Clan> observableClans){
+    private TableView<Clan> createClanTableView(ObservableList<Clan> observableClans){
         TableView<Clan> tableView = new TableView<>();
 
         //
@@ -196,8 +269,19 @@ public class ClanController implements Initializable {
         tableView.getColumns().add(warLossesColumn);
         tableView.getColumns().add(chatLanguageColumn);
 
-        tableView.setItems(observableClans);
+        return tableView;
+    }
 
-        createNewTab(tableView, "Clanes");
+    public HBox createSearchAndFilter() {
+        TextField input = new TextField();
+        input.setPromptText("Buscar en nombre o tag");
+        input.setDisable(true);
+        ComboBox<WarFrequencyStructure> cmb = new ComboBox<>();
+        for (WarFrequencyStructure wf : Constants.WAR_FRECUENCY) {
+            cmb.getItems().add(wf);
+        }
+        cmb.getSelectionModel().selectFirst();
+        cmb.setDisable(true);
+        return new HBox(10, input, cmb);
     }
 }

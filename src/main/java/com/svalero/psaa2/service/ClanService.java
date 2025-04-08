@@ -27,7 +27,7 @@ public class ClanService {
                         System.out.println("Clan numbers in response: " + response.getItems().size());
                 })
                 .doOnComplete(() -> {
-                    System.out.println("End sending");
+                    System.out.println("Observer complete event");
                 })
                 .flatMapIterable(ApiResponseClans::getItems);
     }
@@ -42,7 +42,7 @@ public class ClanService {
                         System.out.println("Location numbers in response: " + response.getItems().size());
                 })
                 .doOnComplete(() -> {
-                    System.out.println("End sending");
+                    System.out.println("Observer complete event");
                 })
                 .flatMapIterable(ApiResponseLocations::getItems);
     }
