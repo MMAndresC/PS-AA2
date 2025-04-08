@@ -1,9 +1,10 @@
 package com.svalero.psaa2.controller;
 
 import com.svalero.psaa2.domain.Clan;
+import com.svalero.psaa2.domain.Location;
 import com.svalero.psaa2.task.GetClansApiTask;
+import com.svalero.psaa2.task.GetLocationsApiTask;
 import com.svalero.psaa2.utils.ErrorLogger;
-import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -16,7 +17,7 @@ import javafx.scene.control.*;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class ClansController implements Initializable {
+public class ClanController implements Initializable {
 
     @FXML
     private TabPane tabPane;
@@ -24,7 +25,7 @@ public class ClansController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
 
-    public void onClickSearchClans(){
+    public void onClickGetClans(){
         ObservableList<Clan> observableData = FXCollections.observableArrayList();
         // Create new tab with table
         createClanTableView(observableData);
@@ -33,16 +34,31 @@ public class ClansController implements Initializable {
         //Init thread
         Thread thread = new Thread(task);
         // Control states of task
-        controlStatesTask(task);
+        controlFailedClanTask(task);
         //Close thread if app closes
         thread.setDaemon(true);
         thread.start();
     }
 
-    private void controlStatesTask(GetClansApiTask task){
+    public void onClickGetLocations(){
+        ObservableList<Location> observableData = FXCollections.observableArrayList();
+        // Create new tab with table
+        createLocationTableView(observableData);
+        //Init task
+        GetLocationsApiTask task = new GetLocationsApiTask(observableData);
+        //Init thread
+        Thread thread = new Thread(task);
+        // Control states of task
+        controlFailedLocationTask(task);
+        //Close thread if app closes
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void controlFailedClanTask(GetClansApiTask task){
         //Task ends before complete sending
         task.setOnFailed(event -> {
-            ErrorLogger.log("No se han podido listar los clanes");
+            ErrorLogger.log("Failed listing clans");
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setHeaderText("Notificacion");
             alert.setContentText("Error listando los clanes");
@@ -50,9 +66,68 @@ public class ClansController implements Initializable {
         });
     }
 
+    private void controlFailedLocationTask(GetLocationsApiTask task){
+        //Task ends before complete sending
+        task.setOnFailed(event -> {
+            ErrorLogger.log("Failed listing locations");
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setHeaderText("Notificacion");
+            alert.setContentText("Error listando las localizaciones");
+            alert.show();
+        });
+    }
+
+    //Generic type T to wrap both types of tableView
+    public <T> void createNewTab(TableView<T> tableView, String label) {
+        ScrollPane scrollPane = new ScrollPane(tableView);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setPrefSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        scrollPane.setPadding(new Insets(0, 0, 10, 10));
+
+        Tab tab = new Tab(label);
+
+        try{
+            //Add new tab
+            tab.setContent(scrollPane);
+            tabPane.getTabs().add(tab);
+            // Focus on new tab
+            tabPane.getSelectionModel().select(tab);
+        }catch(Exception e){
+            System.out.println(e.getMessage());
+            ErrorLogger.log(e.getMessage());
+        }
+    }
+
+    private void createLocationTableView(ObservableList<Location> observableLocations){
+        TableView<Location> tableView = new TableView<>();
+
+        TableColumn<Location, Integer> idColumn = new TableColumn<>("ID");
+        idColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getId()));
+
+        TableColumn<Location, String> nameColumn = new TableColumn<>("Nombre");
+        nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
+
+        TableColumn<Location, Boolean> isCountryColumn = new TableColumn<>("Es pais?");
+        isCountryColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().isCountry()));
+
+        TableColumn<Location, String> countryCodeColumn = new TableColumn<>("Código del país");
+        countryCodeColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getCountryCode()));
+
+        tableView.getColumns().add(idColumn);
+        tableView.getColumns().add(nameColumn);
+        tableView.getColumns().add(isCountryColumn);
+        tableView.getColumns().add(countryCodeColumn);
+
+        tableView.setItems(observableLocations);
+
+        createNewTab(tableView, "Localizaciones");
+    }
+
     private void createClanTableView(ObservableList<Clan> observableClans){
         TableView<Clan> tableView = new TableView<>();
 
+        //
         TableColumn<Clan, String> nameColumn = new TableColumn<>("Nombre");
         nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
 
@@ -107,6 +182,7 @@ public class ClansController implements Initializable {
             return new ReadOnlyStringWrapper(chatLanguage);
         });
 
+        //Set columns in table
         tableView.getColumns().add(nameColumn);
         tableView.getColumns().add(tagColumn);
         tableView.getColumns().add(membersColumn);
@@ -122,23 +198,6 @@ public class ClansController implements Initializable {
 
         tableView.setItems(observableClans);
 
-        ScrollPane scrollPane = new ScrollPane(tableView);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setFitToHeight(true);
-        scrollPane.setPrefSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        scrollPane.setPadding(new Insets(0, 0, 10, 10));
-
-        Tab tab = new Tab("Clanes");
-
-        Platform.runLater(() -> {
-            try{
-                //scrollPane.setContent(tableView);
-                tab.setContent(scrollPane);
-                tabPane.getTabs().add(tab);
-            }catch(Exception e){
-                System.out.println(e.getMessage());
-                ErrorLogger.log(e.getMessage());
-            }
-        });
+        createNewTab(tableView, "Clanes");
     }
 }

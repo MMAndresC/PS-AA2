@@ -1,9 +1,10 @@
 package com.svalero.psaa2.service;
 
 import com.svalero.psaa2.constants.Constants;
-import com.svalero.psaa2.domain.ApiResponse;
+import com.svalero.psaa2.domain.ApiResponseClans;
+import com.svalero.psaa2.domain.ApiResponseLocations;
 import com.svalero.psaa2.domain.Clan;
-import com.svalero.psaa2.env.ApiKey;
+import com.svalero.psaa2.domain.Location;
 import io.reactivex.rxjava3.core.Observable;
 
 public class ClanService {
@@ -17,7 +18,7 @@ public class ClanService {
     }
 
     public Observable<Clan> getClans(){
-        return this.api.getClansByWarFrequency(this.locationId, Constants.LIMIT)
+        return this.api.getClansByLocationId(this.locationId, Constants.LIMIT)
                 .toObservable()
                 .doOnNext(response -> {
                     if (response.getItems() == null || response.getItems().isEmpty())
@@ -28,6 +29,21 @@ public class ClanService {
                 .doOnComplete(() -> {
                     System.out.println("End sending");
                 })
-                .flatMapIterable(ApiResponse::getItems);
+                .flatMapIterable(ApiResponseClans::getItems);
+    }
+
+    public Observable<Location> getLocations(){
+        return this.api.getLocations(Constants.LIMIT)
+                .toObservable()
+                .doOnNext(response -> {
+                    if (response.getItems() == null || response.getItems().isEmpty())
+                        System.out.println("No locations in response");
+                    else
+                        System.out.println("Location numbers in response: " + response.getItems().size());
+                })
+                .doOnComplete(() -> {
+                    System.out.println("End sending");
+                })
+                .flatMapIterable(ApiResponseLocations::getItems);
     }
 }
