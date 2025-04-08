@@ -2,6 +2,7 @@ package com.svalero.psaa2.service;
 
 import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.env.ApiKey;
+import com.svalero.psaa2.utils.ErrorLogger;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory;
@@ -21,11 +22,17 @@ public class ClashOfClansApiService {
                     .addInterceptor(chain -> {
                         Request original = chain.request();
                         Request.Builder requestBuilder = original.newBuilder()
+                                // Add token in all requests
                                 .header("Authorization", ApiKey.TOKEN)
                                 .method(original.method(), original.body());
 
                         Request request = requestBuilder.build();
-                        return chain.proceed(request);
+                        okhttp3.Response response =  chain.proceed(request);
+                        // Log HTTP error
+                        if (!response.isSuccessful()) {
+                            ErrorLogger.log("HTTP Error: " + response.code() + " " + response.message());
+                        }
+                        return response;
                     })
                     .build();
 

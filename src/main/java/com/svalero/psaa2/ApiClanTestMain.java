@@ -7,7 +7,7 @@ import io.reactivex.rxjava3.functions.Consumer;
 
 import java.util.concurrent.CountDownLatch;
 
-public class ApiTestMain {
+public class ApiClanTestMain {
 
     public static void main(String[] args) {
 
