@@ -4,7 +4,6 @@ import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.domain.*;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
-import io.reactivex.rxjava3.subjects.PublishSubject;
 
 
 public class ClanService {

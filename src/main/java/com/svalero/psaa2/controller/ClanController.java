@@ -6,6 +6,7 @@ import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.domain.Location;
 import com.svalero.psaa2.task.GetClansApiTask;
 import com.svalero.psaa2.task.GetLocationsApiTask;
+import com.svalero.psaa2.utils.AutoResizeColumns;
 import com.svalero.psaa2.utils.ErrorLogger;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -100,6 +101,8 @@ public class ClanController implements Initializable {
             FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS, cmb);
 
             tableView.setItems(filteredData);
+
+            AutoResizeColumns.autoResize(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
@@ -128,6 +131,8 @@ public class ClanController implements Initializable {
             FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS, cmb);
 
             tableView.setItems(filteredData);
+
+            AutoResizeColumns.autoResize(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
