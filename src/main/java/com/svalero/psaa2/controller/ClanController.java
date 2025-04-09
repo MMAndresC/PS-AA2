@@ -82,7 +82,6 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            System.out.println("Succeeded");
             tab.setText(LABEL_CLANS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
@@ -92,15 +91,8 @@ public class ClanController implements Initializable {
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
             ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
 
-            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS);
+            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS, cmb);
 
-            cmb.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
-                filteredData.setPredicate(item -> {
-                    String option = cmb.getSelectionModel().getSelectedItem().getValue();
-                    if (option.equals(Constants.WAR_FRECUENCY.getFirst().getValue())) return true;
-                    return item.getWarFrequency().equals(option);
-                });
-            });
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -117,7 +109,6 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            System.out.println("Succeeded");
             tab.setText(LABEL_LOCATIONS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
@@ -128,17 +119,8 @@ public class ClanController implements Initializable {
             ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
 
             // Link tableView to filtered data
-            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS);
+            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS, cmb);
 
-            cmb.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
-                filteredData.setPredicate(item -> {
-                    int indexOption = cmb.getSelectionModel().getSelectedIndex();
-                    String option = cmb.getSelectionModel().getSelectedItem();
-                    boolean isCountry = option.equals("Si");
-                    if (indexOption == 0) return true;
-                    return item.isCountry() == isCountry;
-                });
-            });
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -157,28 +139,64 @@ public class ClanController implements Initializable {
      * @return
      * @param <T>
      */
-    private <T> FilteredList<T> addChangeEventListener(ObservableList<T> observableData, TextField input, String label){
+    private <T> FilteredList<T> addChangeEventListener(
+            ObservableList<T> observableData,
+            TextField input,
+            String label,
+            ComboBox<?> cmb
+    ){
         FilteredList<T> filteredData = new FilteredList<>(observableData, p -> true);
-        input.textProperty().addListener((obs, oldValue, newValue) -> {
-            filteredData.setPredicate(item -> {
 
-                if (newValue == null || newValue.isEmpty()) return true;
+        // Create a method or use this, save me pass params again
+        Runnable setFilter = () -> {
+            String searchText = input.getText();
+            Object selectedFilter = cmb.getSelectionModel().getSelectedItem();
+            int indexCmb = cmb.getSelectionModel().getSelectedIndex();
 
-                String lowerCaseFilter = newValue.toLowerCase();
+            filteredData.setPredicate(item ->{
+                boolean matchesSearch = true;
+                boolean matchesFilter = true;
 
+                // Clan tableView data
                 if(label.equals(LABEL_CLANS)){
-                    return ((Clan) item).getName().toLowerCase().contains(lowerCaseFilter) ||
-                            ((Clan) item).getTag().toLowerCase().contains(lowerCaseFilter);
+                    Clan clan = (Clan) item;
+                    // Check if searchText is in clan name or tag
+                    if(!searchText.isBlank()){
+                        matchesSearch = clan.getName().toLowerCase().contains(searchText.toLowerCase()) ||
+                                clan.getTag().toLowerCase().contains(searchText.toLowerCase());
+                    }
+                    // Filter by war frequency value selected in combobox, discard first value
+                    if (selectedFilter instanceof WarFrequencyStructure wf
+                            && !wf.getValue().equals(Constants.WAR_FRECUENCY.getFirst().getValue())
+                    ) {
+                        matchesFilter = clan.getWarFrequency().equals(wf.getValue());
+                    }
+
+                // Locations tableView data
                 }else if(label.equals(LABEL_LOCATIONS)){
-                    return ((Location) item).getName().toLowerCase().contains(lowerCaseFilter) ||
-                            (
-                                    ((Location) item).getCountryCode() != null &&
-                                            ((Location) item).getCountryCode().toLowerCase().contains(lowerCaseFilter)
-                            );
+                    Location location = (Location) item;
+                    // Check if searchText is in location name or countryCode if exist
+                    if(!searchText.isBlank()){
+                        matchesSearch = location.getName().toLowerCase().contains(searchText.toLowerCase())
+                                || (location.getCountryCode() != null &&
+                                location.getCountryCode().toLowerCase().contains(searchText.toLowerCase()));
+                    }
+                    // Filter by is country value selected in combobox, discard first value
+                    if (selectedFilter instanceof String value && indexCmb != 0) {
+                        boolean boolValue = value.equalsIgnoreCase("si");
+                        matchesFilter = location.isCountry() == boolValue;
+                    }
                 }
-                return false;
+                return matchesSearch && matchesFilter;
             });
-        });
+        };
+
+        //Add listeners
+        input.textProperty().addListener(
+                (obs, oldVal, newVal) -> setFilter.run());
+        cmb.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> setFilter.run());
+
         return filteredData;
     }
 
