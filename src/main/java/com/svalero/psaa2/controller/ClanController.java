@@ -90,7 +90,17 @@ public class ClanController implements Initializable {
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
+            ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+
             FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS);
+
+            cmb.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+                filteredData.setPredicate(item -> {
+                    String option = cmb.getSelectionModel().getSelectedItem().getValue();
+                    if (option.equals(Constants.WAR_FRECUENCY.getFirst().getValue())) return true;
+                    return item.getWarFrequency().equals(option);
+                });
+            });
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -115,8 +125,20 @@ public class ClanController implements Initializable {
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
+            ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+
             // Link tableView to filtered data
             FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS);
+
+            cmb.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+                filteredData.setPredicate(item -> {
+                    int indexOption = cmb.getSelectionModel().getSelectedIndex();
+                    String option = cmb.getSelectionModel().getSelectedItem();
+                    boolean isCountry = option.equals("Si");
+                    if (indexOption == 0) return true;
+                    return item.isCountry() == isCountry;
+                });
+            });
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -139,9 +161,11 @@ public class ClanController implements Initializable {
         FilteredList<T> filteredData = new FilteredList<>(observableData, p -> true);
         input.textProperty().addListener((obs, oldValue, newValue) -> {
             filteredData.setPredicate(item -> {
+
                 if (newValue == null || newValue.isEmpty()) return true;
 
                 String lowerCaseFilter = newValue.toLowerCase();
+
                 if(label.equals(LABEL_CLANS)){
                     return ((Clan) item).getName().toLowerCase().contains(lowerCaseFilter) ||
                             ((Clan) item).getTag().toLowerCase().contains(lowerCaseFilter);
