@@ -24,6 +24,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class ClanController implements Initializable {
@@ -31,9 +33,13 @@ public class ClanController implements Initializable {
     @FXML
     private TabPane tabPane;
 
-    private String LABEL_CLANS = "Clanes";
+    private final String LABEL_CLANS = "Clanes";
 
-    private String LABEL_LOCATIONS = "Locations";
+    private final String LABEL_LOCATIONS = "Locations";
+
+    private final List<String> attrAfterClans = new ArrayList<>();
+
+    private final List<String> attrAfterLocations = new ArrayList<>();
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
@@ -46,7 +52,7 @@ public class ClanController implements Initializable {
         // Create new tab
         Tab tab = createNewTab(tableView, LABEL_CLANS);
         //Init task
-        GetClansApiTask task = new GetClansApiTask(observableData);
+        GetClansApiTask task = new GetClansApiTask(observableData, attrAfterClans);
         //Init thread
         Thread thread = new Thread(task);
         // Control states of task
@@ -64,7 +70,7 @@ public class ClanController implements Initializable {
         // Create new tab
         Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
         //Init task
-        GetLocationsApiTask task = new GetLocationsApiTask(observableData);
+        GetLocationsApiTask task = new GetLocationsApiTask(observableData, attrAfterLocations);
         //Init thread
         Thread thread = new Thread(task);
         // Control states of task

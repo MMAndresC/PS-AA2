@@ -11,9 +11,13 @@ public interface ClashOfClansApiInterface {
     @GET("clans")
     Single<ApiResponseClans> getClansByLocationId(
             @Query("locationId") int locationId,
-            @Query("limit") int limit
+            @Query("limit") int limit,
+            @Query("after") String after
     );
 
     @GET("locations")
-    Single<ApiResponseLocations> getLocations(@Query("limit") int limit);
+    Single<ApiResponseLocations> getLocations(
+            @Query("limit") int limit,
+            @Query("after") String after
+    );
 }
