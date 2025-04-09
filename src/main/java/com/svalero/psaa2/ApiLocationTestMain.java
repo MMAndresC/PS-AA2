@@ -12,7 +12,7 @@ public class ApiLocationTestMain {
     public static void main(String[] args) {
 
         int locationId = Constants.LOCATION_ID_SPAIN;
-        ClanService clanService = new ClanService(locationId);
+        ClanService clanService = new ClanService(locationId, null);
 
         //Evitar que se cierre el programa antes de que termine de recepcionar los datos de la aoi
         CountDownLatch latch = new CountDownLatch(1);

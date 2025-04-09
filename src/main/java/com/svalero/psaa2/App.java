@@ -11,7 +11,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource("clans-view.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 912 , 643);
+        Scene scene = new Scene(fxmlLoader.load(), 1100 , 643);
         stage.setTitle("Clash of Clans");
         stage.setScene(scene);
         stage.show();
