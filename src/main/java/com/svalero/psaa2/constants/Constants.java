@@ -11,7 +11,7 @@ public class Constants {
     public final static int LOCATION_ID_SPAIN = 32000218;
 
     public final static List<WarFrequencyStructure> WAR_FRECUENCY = List.of(
-            new WarFrequencyStructure("noSelect", "Seleccionar frecuencia"),
+            new WarFrequencyStructure("noSelect", "Filtrar por frecuencia"),
             new WarFrequencyStructure("unknown", "Desconocido"),
             new WarFrequencyStructure("always", "Siempre"),
             new WarFrequencyStructure("moreThanOncePerWeek", "Más que una vez por semana"),

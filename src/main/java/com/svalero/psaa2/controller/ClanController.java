@@ -15,6 +15,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -73,6 +74,7 @@ public class ClanController implements Initializable {
         thread.start();
     }
 
+
     private void controlStatesClanTask(
             GetClansApiTask task,
             ObservableList<Clan> observableData,
@@ -88,20 +90,7 @@ public class ClanController implements Initializable {
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            // Filter
-            FilteredList<Clan> filteredData = new FilteredList<>(observableData, p -> true);
-            input.textProperty().addListener((obs, oldValue, newValue) -> {
-                filteredData.setPredicate(item -> {
-                    if (newValue == null || newValue.isEmpty()) return true;
-
-                    String lowerCaseFilter = newValue.toLowerCase();
-
-                    return item.getName().toLowerCase().contains(lowerCaseFilter) ||
-                            item.getTag().toLowerCase().contains(lowerCaseFilter);
-                });
-            });
-
-            // Enlaza la tabla con la lista filtrada
+            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS);
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -126,23 +115,8 @@ public class ClanController implements Initializable {
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            // Filter
-            FilteredList<Location> filteredData = new FilteredList<>(observableData, p -> true);
-            input.textProperty().addListener((obs, oldValue, newValue) -> {
-                filteredData.setPredicate(item -> {
-                    if (newValue == null || newValue.isEmpty()) return true;
-
-                    String lowerCaseFilter = newValue.toLowerCase();
-
-                    return item.getName().toLowerCase().contains(lowerCaseFilter) ||
-                            (
-                                item.getCountryCode() != null &&
-                                item.getCountryCode().toLowerCase().contains(lowerCaseFilter)
-                            );
-                });
-            });
-
-            // Enlaza la tabla con la lista filtrada
+            // Link tableView to filtered data
+            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS);
             tableView.setItems(filteredData);
         });
         //Task ends before complete sending
@@ -151,6 +125,40 @@ public class ClanController implements Initializable {
             tab.setText(LABEL_LOCATIONS + " ⛔");
         });
     }
+
+    /**
+     * Add change event listener to textField to search in tableView
+     * Abstract method to work with both types Clan/Location
+     * @param observableData
+     * @param input
+     * @param label
+     * @return
+     * @param <T>
+     */
+    private <T> FilteredList<T> addChangeEventListener(ObservableList<T> observableData, TextField input, String label){
+        FilteredList<T> filteredData = new FilteredList<>(observableData, p -> true);
+        input.textProperty().addListener((obs, oldValue, newValue) -> {
+            filteredData.setPredicate(item -> {
+                if (newValue == null || newValue.isEmpty()) return true;
+
+                String lowerCaseFilter = newValue.toLowerCase();
+                if(label.equals(LABEL_CLANS)){
+                    return ((Clan) item).getName().toLowerCase().contains(lowerCaseFilter) ||
+                            ((Clan) item).getTag().toLowerCase().contains(lowerCaseFilter);
+                }else if(label.equals(LABEL_LOCATIONS)){
+                    return ((Location) item).getName().toLowerCase().contains(lowerCaseFilter) ||
+                            (
+                                    ((Location) item).getCountryCode() != null &&
+                                            ((Location) item).getCountryCode().toLowerCase().contains(lowerCaseFilter)
+                            );
+                }
+                return false;
+            });
+        });
+        return filteredData;
+    }
+
+
 
     //Generic type T to wrap both types of tableView
     public <T> Tab createNewTab(TableView<T> tableView, String label) {
@@ -161,7 +169,7 @@ public class ClanController implements Initializable {
 
         Tab tab = new Tab(label + " ⌛");
 
-        HBox searchFilterBar = createSearchAndFilter();
+        HBox searchFilterBar = createSearchAndFilter(label);
         VBox container = new VBox(10,searchFilterBar, scrollPane);
         // Set components attributes to growth to expand all height
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
@@ -272,16 +280,33 @@ public class ClanController implements Initializable {
         return tableView;
     }
 
-    public HBox createSearchAndFilter() {
+    public HBox createSearchAndFilter(String label) {
         TextField input = new TextField();
-        input.setPromptText("Buscar en nombre o tag");
         input.setDisable(true);
-        ComboBox<WarFrequencyStructure> cmb = new ComboBox<>();
-        for (WarFrequencyStructure wf : Constants.WAR_FRECUENCY) {
-            cmb.getItems().add(wf);
+        input.setMinWidth(250);
+        HBox hbox = new HBox();
+        if(label.equals(LABEL_CLANS)){
+            input.setPromptText("Buscar en nombre o tag");
+            ComboBox<WarFrequencyStructure> cmb = new ComboBox<>();
+            for (WarFrequencyStructure wf : Constants.WAR_FRECUENCY) {
+                cmb.getItems().add(wf);
+            }
+            cmb.getSelectionModel().selectFirst();
+            cmb.setDisable(true);
+            hbox.getChildren().addAll(input, cmb);
+            HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
+        }else{
+            input.setPromptText("Buscar en nombre o código de pais");
+            ComboBox<String> cmb = new ComboBox<>();
+            cmb.getItems().addAll("Filtrar por Es país?", "Si", "No");
+            cmb.getSelectionModel().selectFirst();
+            cmb.setDisable(true);
+            hbox.getChildren().addAll(input, cmb);
+            HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
         }
-        cmb.getSelectionModel().selectFirst();
-        cmb.setDisable(true);
-        return new HBox(10, input, cmb);
+        hbox.setPadding(new Insets(20, 10, 10, 10));
+        hbox.setAlignment(Pos.CENTER);
+        HBox.setMargin(input, new Insets(0, 10, 0, 0));
+        return hbox;
     }
 }
