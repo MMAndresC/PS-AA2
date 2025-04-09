@@ -14,6 +14,13 @@ public class ErrorLogger {
         try{
             String separator = File.separator;
             String path = System.getProperty("user.home") + separator + MAIN_DIRECTORY + separator + LOGS_DIRECTORY;
+
+            File logDir = new File(path);
+            //Create directory
+            if (!logDir.exists()) {
+                logDir.mkdirs();
+            }
+
             FileHandler errorHandler = new FileHandler(path + separator + FILE_ERROR_LOG, true);
             errorHandler.setFormatter(new SimpleFormatter() {
                 @Override
