@@ -13,6 +13,7 @@ module com.svalero.psaa2 {
     requires io.reactivex.rxjava3;
     requires java.logging;
     requires okhttp3;
+    requires org.jetbrains.annotations;
 
     //MUY IMPORTANTE poner esto o GSON no tendra acceso a las clases de domain y fallara
     opens com.svalero.psaa2.domain to com.google.gson;

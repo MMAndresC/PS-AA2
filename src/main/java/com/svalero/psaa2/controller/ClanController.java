@@ -6,10 +6,12 @@ import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.domain.Location;
 import com.svalero.psaa2.task.GetClansApiTask;
 import com.svalero.psaa2.task.GetLocationsApiTask;
+import com.svalero.psaa2.task.ShowImagesTask;
 import com.svalero.psaa2.utils.AutoResizeColumns;
 import com.svalero.psaa2.utils.ErrorLogger;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -19,11 +21,16 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.jetbrains.annotations.NotNull;
 
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +55,7 @@ public class ClanController implements Initializable {
     public void onClickGetClans(){
         ObservableList<Clan> observableData = FXCollections.observableArrayList();
         // Create new table
-        TableView<Clan> tableView = createClanTableView(observableData);
+        TableView<Clan> tableView = createClanTableView();
         tableView.setItems(observableData);
         // Create new tab
         Tab tab = createNewTab(tableView, LABEL_CLANS);
@@ -66,7 +73,7 @@ public class ClanController implements Initializable {
     public void onClickGetLocations(){
         ObservableList<Location> observableData = FXCollections.observableArrayList();
         // Create new table
-        TableView<Location> tableView = createLocationTableView(observableData);
+        TableView<Location> tableView = createLocationTableView();
         tableView.setItems(observableData);
         // Create new tab
         Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
@@ -102,7 +109,7 @@ public class ClanController implements Initializable {
 
             tableView.setItems(filteredData);
 
-            AutoResizeColumns.autoResize(tableView);
+            AutoResizeColumns.autoResizeColumns(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
@@ -132,7 +139,7 @@ public class ClanController implements Initializable {
 
             tableView.setItems(filteredData);
 
-            AutoResizeColumns.autoResize(tableView);
+            AutoResizeColumns.autoResizeColumns(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
@@ -235,7 +242,7 @@ public class ClanController implements Initializable {
         return tab;
     }
 
-    private TableView<Location> createLocationTableView(ObservableList<Location> observableLocations){
+    private TableView<Location> createLocationTableView(){
         TableView<Location> tableView = new TableView<>();
 
         TableColumn<Location, Integer> idColumn = new TableColumn<>("ID");
@@ -258,10 +265,12 @@ public class ClanController implements Initializable {
        return tableView;
     }
 
-    private TableView<Clan> createClanTableView(ObservableList<Clan> observableClans){
+    private TableView<Clan> createClanTableView(){
         TableView<Clan> tableView = new TableView<>();
 
-        //
+        // Column with badge image
+        TableColumn<Clan, ImageView> badgeColumn = getClanImageViewTableColumn();
+
         TableColumn<Clan, String> nameColumn = new TableColumn<>("Nombre");
         nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
 
@@ -317,6 +326,7 @@ public class ClanController implements Initializable {
         });
 
         //Set columns in table
+        tableView.getColumns().add(badgeColumn);
         tableView.getColumns().add(nameColumn);
         tableView.getColumns().add(tagColumn);
         tableView.getColumns().add(membersColumn);
@@ -331,6 +341,35 @@ public class ClanController implements Initializable {
         tableView.getColumns().add(chatLanguageColumn);
 
         return tableView;
+    }
+
+    @NotNull
+    private TableColumn<Clan, ImageView> getClanImageViewTableColumn() {
+        TableColumn<Clan, ImageView> badgeColumn = new TableColumn<>("Placa");
+        badgeColumn.setCellValueFactory(cellData -> {
+            String url = cellData.getValue().getBadgeUrls().getSmall();
+            ImageView imageView = new ImageView();
+            imageView.setFitWidth(50);
+            imageView.setPreserveRatio(true);
+            //Task to download and get image to set in imageView
+            ShowImagesTask task = new ShowImagesTask(url);
+            task.setOnSucceeded(event -> imageView.setImage(task.getValue()));
+            task.setOnFailed(event -> {
+                ErrorLogger.log(task.getException().getMessage());
+                // Load default image
+                InputStream defaultImage = getClass().getResourceAsStream("/assets/default_badge.png");
+                if(defaultImage != null){
+                    Image image = new Image(defaultImage);
+                    imageView.setImage(image);
+                }
+            });
+            Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            thread.start();
+
+            return new SimpleObjectProperty<>(imageView);
+        });
+        return badgeColumn;
     }
 
     public HBox createSearchAndFilter(String label) {
