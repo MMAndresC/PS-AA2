@@ -2,6 +2,7 @@ package com.svalero.psaa2.service;
 
 import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.domain.*;
+import com.svalero.psaa2.env.ApiKey;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
 
@@ -19,7 +20,7 @@ public class ClanService {
 
     public ClanService(int locationId, String after){
         this.locationId = locationId;
-        this.api =ClashOfClansApiService.getInstance().create(ClashOfClansApiInterface.class);
+        this.api = ApiService.getInstance(ApiKey.TOKEN, Constants.BASE_URL).create(ClashOfClansApiInterface.class);
         this.after = after;
     }
 

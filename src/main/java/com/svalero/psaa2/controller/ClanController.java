@@ -3,9 +3,11 @@ package com.svalero.psaa2.controller;
 import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.constants.WarFrequencyStructure;
 import com.svalero.psaa2.domain.Clan;
+import com.svalero.psaa2.domain.ClashRoyaleClan;
 import com.svalero.psaa2.domain.Label;
 import com.svalero.psaa2.domain.Location;
 import com.svalero.psaa2.task.GetClansApiTask;
+import com.svalero.psaa2.task.GetClashRoyalRankingTask;
 import com.svalero.psaa2.task.GetLocationsApiTask;
 import com.svalero.psaa2.task.ShowImagesTask;
 import com.svalero.psaa2.utils.AutoResizeColumns;
@@ -41,13 +43,24 @@ public class ClanController implements Initializable {
     @FXML
     private TabPane tabPane;
 
+    @FXML
+    private javafx.scene.control.Label lblCountrySelected;
+
+    @FXML
+    private Button btnGetRanking;
+
     private final String LABEL_CLANS = "Clanes";
 
-    private final String LABEL_LOCATIONS = "Locations";
+    private final String LABEL_LOCATIONS = "Localizaciones";
+
+    private final String LABEL_RANKING = "Rankings";
 
     private final List<String> attrAfterClans = new ArrayList<>();
 
     private final List<String> attrAfterLocations = new ArrayList<>();
+
+    private int selectedLocationId;
+
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
@@ -75,6 +88,7 @@ public class ClanController implements Initializable {
         // Create new table
         TableView<Location> tableView = createLocationTableView();
         tableView.setItems(observableData);
+        addSelectEvent(tableView);
         // Create new tab
         Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
         //Init task
@@ -83,6 +97,24 @@ public class ClanController implements Initializable {
         Thread thread = new Thread(task);
         // Control states of task
         controlStatesLocationTask(task, observableData, tableView, tab);
+        //Close thread if app closes
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    public void onClickGetRanking(){
+        ObservableList<ClashRoyaleClan> observableData = FXCollections.observableArrayList();
+        // Create new table
+        TableView<ClashRoyaleClan> tableView = createRankingTableView();
+        tableView.setItems(observableData);
+        // Create new tab
+        Tab tab = createNewTab(tableView, LABEL_RANKING);
+        //Init task
+        GetClashRoyalRankingTask task = new GetClashRoyalRankingTask(observableData, this.selectedLocationId);
+        //Init thread
+        Thread thread = new Thread(task);
+        // Control states of task
+        controlStatesRankingTask(task, tableView, tab);
         //Close thread if app closes
         thread.setDaemon(true);
         thread.start();
@@ -145,6 +177,22 @@ public class ClanController implements Initializable {
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing locations");
             tab.setText(LABEL_LOCATIONS + " ⛔");
+        });
+    }
+
+    private void controlStatesRankingTask(
+            GetClashRoyalRankingTask task,
+            TableView<ClashRoyaleClan> tableView,
+            Tab tab
+    ){
+        task.setOnSucceeded(event -> {
+            tab.setText(LABEL_RANKING + " ✅");
+            AutoResizeColumns.autoResizeColumns(tableView);
+        });
+        //Task ends before complete sending
+        task.setOnFailed(event -> {
+            ErrorLogger.log("Failed listing locations");
+            tab.setText(LABEL_RANKING + " ⛔");
         });
     }
 
@@ -229,8 +277,20 @@ public class ClanController implements Initializable {
 
         Tab tab = new Tab(label + " ⌛");
 
-        HBox searchFilterBar = createSearchAndFilter(label);
-        VBox container = new VBox(10,searchFilterBar, scrollPane);
+        VBox container;
+
+        if(label.equals(LABEL_RANKING)){
+            javafx.scene.control.Label lbCountry = new javafx.scene.control.Label(this.lblCountrySelected.getText());
+            lbCountry.setStyle("-fx-font-size: 18px;");
+            HBox hbox = new HBox(lbCountry);
+            hbox.setPadding(new Insets(20, 10, 10, 10));
+            hbox.setAlignment(Pos.CENTER);
+            container = new VBox(10,hbox, scrollPane);
+        }else{
+            HBox searchFilterBar = createSearchAndFilter(label);
+            container = new VBox(10,searchFilterBar, scrollPane);
+        }
+
         // Set components attributes to growth to expand all height
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
         tableView.setPrefHeight(Region.USE_COMPUTED_SIZE);
@@ -346,6 +406,37 @@ public class ClanController implements Initializable {
         return tableView;
     }
 
+    private TableView<ClashRoyaleClan> createRankingTableView(){
+        TableView<ClashRoyaleClan> tableView = new TableView<>();
+
+        TableColumn<ClashRoyaleClan, String> nameColumn = new TableColumn<>("Nombre");
+        nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
+
+        TableColumn<ClashRoyaleClan, String> tagColumn = new TableColumn<>("Tag");
+        tagColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getTag()));
+
+        TableColumn<ClashRoyaleClan, Integer> rankColumn = new TableColumn<>("Rank");
+        rankColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getRank()));
+
+        TableColumn<ClashRoyaleClan, Integer> previousRankColumn = new TableColumn<>("Anterior Rank");
+        previousRankColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getPreviousRank()));
+
+        TableColumn<ClashRoyaleClan, Integer> clanScoreColumn = new TableColumn<>("Puntuación");
+        clanScoreColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getClanScore()));
+
+        TableColumn<ClashRoyaleClan, Integer> membersColumn = new TableColumn<>("Nº miembros");
+        membersColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getMembers()));
+
+        tableView.getColumns().add(nameColumn);
+        tableView.getColumns().add(tagColumn);
+        tableView.getColumns().add(rankColumn);
+        tableView.getColumns().add(previousRankColumn);
+        tableView.getColumns().add(clanScoreColumn);
+        tableView.getColumns().add(membersColumn);
+
+        return tableView;
+    }
+
     @NotNull
     private TableColumn<Clan, ImageView> getClanBadgeImageViewColumn() {
         TableColumn<Clan, ImageView> badgeColumn = new TableColumn<>("Placa");
@@ -430,5 +521,15 @@ public class ClanController implements Initializable {
         hbox.setAlignment(Pos.CENTER);
         HBox.setMargin(input, new Insets(0, 10, 0, 0));
         return hbox;
+    }
+
+    public void addSelectEvent(TableView<Location> tableView) {
+        tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                lblCountrySelected.setText(newSelection.getName());
+                selectedLocationId = newSelection.getId() + Constants.DIFFERENCE;
+                btnGetRanking.setDisable(false);
+            }
+        });
     }
 }
