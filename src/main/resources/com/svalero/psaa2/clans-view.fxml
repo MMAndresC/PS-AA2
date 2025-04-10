@@ -14,14 +14,14 @@
 <VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="700.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.svalero.psaa2.controller.ClanController">
    <children>
       <Separator prefWidth="200.0" />
-      <HBox prefHeight="102.0" prefWidth="912.0">
+      <HBox prefHeight="99.0" prefWidth="1200.0">
          <children>
             <ImageView fitHeight="99.0" fitWidth="134.0" pickOnBounds="true" preserveRatio="true">
                <image>
                   <Image url="@assets/coc_golem.png" />
                </image>
             </ImageView>
-            <VBox alignment="CENTER" prefHeight="100.0" prefWidth="272.0">
+            <VBox alignment="CENTER" prefHeight="100.0" prefWidth="182.0">
                <children>
                   <Label alignment="CENTER" prefHeight="27.0" prefWidth="263.0" text="Clanes">
                      <font>
@@ -52,7 +52,7 @@
                </HBox.margin>
             </ImageView>
             <Separator orientation="VERTICAL" prefHeight="200.0" />
-            <VBox alignment="CENTER" prefHeight="100.0" prefWidth="244.0">
+            <VBox alignment="CENTER" prefHeight="100.0" prefWidth="196.0">
                <children>
                   <Label text="Localizaciones">
                      <font>
@@ -76,6 +76,31 @@
             <ImageView fitHeight="104.0" fitWidth="105.0" pickOnBounds="true" preserveRatio="true">
                <image>
                   <Image url="@assets/coc_archer.png" />
+               </image>
+            </ImageView>
+            <Separator orientation="VERTICAL" prefHeight="200.0" />
+            <VBox alignment="CENTER" prefHeight="100.0" prefWidth="245.0">
+               <children>
+                  <Label text="Clash Royale ranking">
+                     <font>
+                        <Font size="18.0" />
+                     </font>
+                  </Label>
+                  <Button fx:id="btnGetRanking" disable="true" mnemonicParsing="false" onAction="#onClickGetRanking" prefHeight="38.0" prefWidth="60.0">
+                     <graphic>
+                        <ImageView fitHeight="50.0" fitWidth="50.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@assets/cr_ranking_icon.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
+                  </Button>
+                  <Label fx:id="lblCountrySelected" text="Ningún país seleccionado" />
+               </children>
+            </VBox>
+            <ImageView fitHeight="94.0" fitWidth="135.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@assets/cr_logo.png" />
                </image>
             </ImageView>
          </children>
