@@ -310,7 +310,12 @@ public class ClanController implements Initializable {
 
                           try {
                               // Create csv
-                              File csvFile = CreateCsv.exportClan((ObservableList<Clan>) data, filePath);
+                              File csvFile;
+                              if (data.get(0) instanceof Clan)
+                                  csvFile = CreateCsv.exportClan((ObservableList<Clan>) data, filePath);
+                              else
+                                  csvFile = CreateCsv.exportLocation((ObservableList<Location>) data, filePath);
+
                               if (!selectedZip) return csvFile;
 
                               //Create zip csv

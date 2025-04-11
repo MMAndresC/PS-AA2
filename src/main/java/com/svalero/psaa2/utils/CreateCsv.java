@@ -69,4 +69,27 @@ public class CreateCsv {
             throw new IOException("Error generating csv file");
         }
     }
+
+    public static File exportLocation(ObservableList<Location> locations, String filePath) throws IOException {
+        String header = "ID,Name,Is country?,Country code,Localized name\n";
+
+        File file = new File(filePath);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write(header);
+            for(Location location: locations){
+                writer.write(String.join(",", List.of(
+                        String.valueOf(location.getId()),
+                        sanitizeStrings(location.getName()),
+                        String.valueOf(location.isCountry()),
+                        sanitizeStrings(location.getCountryCode()),
+                        sanitizeStrings(location.getLocalizedName())
+                )) + "\n");
+            }
+            return file;
+        }catch (IOException e) {
+            ErrorLogger.log(e.getMessage());
+            throw new IOException("Error generating csv file");
+        }
+    }
 }
