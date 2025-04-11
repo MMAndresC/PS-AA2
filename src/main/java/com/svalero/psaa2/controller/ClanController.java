@@ -6,12 +6,12 @@ import com.svalero.psaa2.domain.Clan;
 import com.svalero.psaa2.domain.ClashRoyaleClan;
 import com.svalero.psaa2.domain.Label;
 import com.svalero.psaa2.domain.Location;
-import com.svalero.psaa2.task.GetClansApiTask;
-import com.svalero.psaa2.task.GetClashRoyalRankingTask;
-import com.svalero.psaa2.task.GetLocationsApiTask;
-import com.svalero.psaa2.task.ShowImagesTask;
+import com.svalero.psaa2.task.*;
 import com.svalero.psaa2.utils.AutoResizeColumns;
+import com.svalero.psaa2.utils.CreateCsv;
 import com.svalero.psaa2.utils.ErrorLogger;
+import com.svalero.psaa2.utils.ZipFile;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -30,13 +30,18 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 public class ClanController implements Initializable {
 
@@ -49,12 +54,6 @@ public class ClanController implements Initializable {
     @FXML
     private Button btnGetRanking;
 
-    private final String LABEL_CLANS = "Clanes";
-
-    private final String LABEL_LOCATIONS = "Localizaciones";
-
-    private final String LABEL_RANKING = "Rankings";
-
     private final List<String> attrAfterClans = new ArrayList<>();
 
     private final List<String> attrAfterLocations = new ArrayList<>();
@@ -65,13 +64,15 @@ public class ClanController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
 
+    // ON ACTION BUTTONS
+
     public void onClickGetClans(){
         ObservableList<Clan> observableData = FXCollections.observableArrayList();
         // Create new table
         TableView<Clan> tableView = createClanTableView();
         tableView.setItems(observableData);
         // Create new tab
-        Tab tab = createNewTab(tableView, LABEL_CLANS);
+        Tab tab = createNewTab(tableView, Constants.LABEL_CLANS, observableData);
         //Init task
         GetClansApiTask task = new GetClansApiTask(observableData, attrAfterClans);
         //Init thread
@@ -90,7 +91,7 @@ public class ClanController implements Initializable {
         tableView.setItems(observableData);
         addSelectEvent(tableView);
         // Create new tab
-        Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
+        Tab tab = createNewTab(tableView, Constants.LABEL_LOCATIONS, observableData);
         //Init task
         GetLocationsApiTask task = new GetLocationsApiTask(observableData, attrAfterLocations);
         //Init thread
@@ -108,7 +109,7 @@ public class ClanController implements Initializable {
         TableView<ClashRoyaleClan> tableView = createRankingTableView();
         tableView.setItems(observableData);
         // Create new tab
-        Tab tab = createNewTab(tableView, LABEL_RANKING);
+        Tab tab = createNewTab(tableView, Constants.LABEL_RANKING, observableData);
         //Init task
         GetClashRoyalRankingTask task = new GetClashRoyalRankingTask(observableData, this.selectedLocationId);
         //Init thread
@@ -120,6 +121,7 @@ public class ClanController implements Initializable {
         thread.start();
     }
 
+    // CONTROL STATES TASK
 
     private void controlStatesClanTask(
             GetClansApiTask task,
@@ -128,16 +130,16 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            tab.setText(LABEL_CLANS + " ✅");
+            tab.setText(Constants.LABEL_CLANS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
             for( Node component : searchFilterBar.getChildren()){
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+            ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().get(1);
 
-            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS, cmb);
+            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, Constants.LABEL_CLANS, cmb);
 
             tableView.setItems(filteredData);
 
@@ -146,7 +148,7 @@ public class ClanController implements Initializable {
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing clans");
-            tab.setText(LABEL_CLANS + " ⛔");
+            tab.setText(Constants.LABEL_CLANS + " ⛔");
         });
     }
 
@@ -157,17 +159,18 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            tab.setText(LABEL_LOCATIONS + " ✅");
+            tab.setText(Constants.LABEL_LOCATIONS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
             for( Node component : searchFilterBar.getChildren()){
                 component.setDisable(false);
             }
+
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+            ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().get(1);
 
             // Link tableView to filtered data
-            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS, cmb);
+            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, Constants.LABEL_LOCATIONS, cmb);
 
             tableView.setItems(filteredData);
 
@@ -176,7 +179,7 @@ public class ClanController implements Initializable {
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing locations");
-            tab.setText(LABEL_LOCATIONS + " ⛔");
+            tab.setText(Constants.LABEL_LOCATIONS + " ⛔");
         });
     }
 
@@ -186,15 +189,17 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            tab.setText(LABEL_RANKING + " ✅");
+            tab.setText(Constants.LABEL_RANKING + " ✅");
             AutoResizeColumns.autoResizeColumns(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing locations");
-            tab.setText(LABEL_RANKING + " ⛔");
+            tab.setText(Constants.LABEL_RANKING + " ⛔");
         });
     }
+
+    // EVENT LISTENERS
 
     /**
      * Add change event listener to textField to search in tableView
@@ -224,7 +229,7 @@ public class ClanController implements Initializable {
                 boolean matchesFilter = true;
 
                 // Clan tableView data
-                if(label.equals(LABEL_CLANS)){
+                if(label.equals(Constants.LABEL_CLANS)){
                     Clan clan = (Clan) item;
                     // Check if searchText is in clan name or tag
                     if(!searchText.isBlank()){
@@ -239,7 +244,7 @@ public class ClanController implements Initializable {
                     }
 
                 // Locations tableView data
-                }else if(label.equals(LABEL_LOCATIONS)){
+                }else if(label.equals(Constants.LABEL_LOCATIONS)){
                     Location location = (Location) item;
                     // Check if searchText is in location name or countryCode if exist
                     if(!searchText.isBlank()){
@@ -266,10 +271,82 @@ public class ClanController implements Initializable {
         return filteredData;
     }
 
+    public void addSelectEvent(TableView<Location> tableView) {
+        tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                lblCountrySelected.setText(newSelection.getName());
+                selectedLocationId = newSelection.getId() + Constants.DIFFERENCE;
+                btnGetRanking.setDisable(false);
+            }
+        });
+    }
 
+    public <T> void addOnActionBtnExport(Button btnExport, ObservableList<T> data, String label) {
+        btnExport.setOnAction(event -> {
+            // Choose directory to save csv file
+            Stage stage = (Stage) btnExport.getScene().getWindow();
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            String basePath = System.getProperty("user.home");
+            File initialDirectory = new File(basePath);
+            if (initialDirectory.exists()) {
+                directoryChooser.setInitialDirectory(initialDirectory);
+            }
+            File selectedDirectory = directoryChooser.showDialog(stage);
+            if (selectedDirectory != null) {
+                // create csv file & zip if option is selected
+              CompletableFuture
+                      .supplyAsync(() -> {
+
+                          // Get if checkbox is checked, option to zip csv
+                          HBox container = (HBox) btnExport.getParent();
+                          CheckBox cbZip = (CheckBox) container.getChildren().getLast();
+                          boolean selectedZip = cbZip.isSelected();
+
+                          // Create file path
+                          long millis = System.currentTimeMillis();
+                          String separator = File.separator;
+                          String filename = separator + label + "_" + millis + ".csv";
+                          String filePath = selectedDirectory.getAbsolutePath() + filename;
+
+                          try {
+                              // Create csv
+                              File csvFile = CreateCsv.exportClan((ObservableList<Clan>) data, filePath);
+                              if (!selectedZip) return csvFile;
+
+                              //Create zip csv
+                              File zipFile = ZipFile.zip(csvFile);
+                              csvFile.delete();
+
+                              return zipFile;
+                          } catch (IOException e) {
+                              ErrorLogger.log(e.getMessage());
+                              return null;
+                          }
+                      })
+                      .thenAccept(file -> {
+                          Platform.runLater(() -> {
+                              try {
+                                  Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                                  alert.setHeaderText("Notificacion");
+                                  alert.setContentText("Datos exportados en el archivo " + file.getName());
+                                  alert.show();
+                              } catch (Exception e) {
+                                  ErrorLogger.log(e.getMessage());
+                              }
+                          });
+                      })
+                      .exceptionally(ex -> {
+                          ErrorLogger.log(ex.getMessage());
+                          return null;
+                      });
+            }
+        });
+    }
+
+    //UI
 
     //Generic type T to wrap both types of tableView
-    public <T> Tab createNewTab(TableView<T> tableView, String label) {
+    public <T> Tab createNewTab(TableView<T> tableView, String label, ObservableList<T> data) {
         ScrollPane scrollPane = new ScrollPane(tableView);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
@@ -279,7 +356,7 @@ public class ClanController implements Initializable {
 
         VBox container;
 
-        if(label.equals(LABEL_RANKING)){
+        if(label.equals(Constants.LABEL_RANKING)){
             javafx.scene.control.Label lbCountry = new javafx.scene.control.Label(this.lblCountrySelected.getText());
             lbCountry.setStyle("-fx-font-size: 18px;");
             HBox hbox = new HBox(lbCountry);
@@ -287,7 +364,7 @@ public class ClanController implements Initializable {
             hbox.setAlignment(Pos.CENTER);
             container = new VBox(10,hbox, scrollPane);
         }else{
-            HBox searchFilterBar = createSearchAndFilter(label);
+            HBox searchFilterBar = createSearchAndFilter(label, data);
             container = new VBox(10,searchFilterBar, scrollPane);
         }
 
@@ -493,12 +570,17 @@ public class ClanController implements Initializable {
         return labelsColumn;
     }
 
-    public HBox createSearchAndFilter(String label) {
+    public <T> HBox createSearchAndFilter(String label, ObservableList<T> data) {
         TextField input = new TextField();
         input.setDisable(true);
         input.setMinWidth(250);
         HBox hbox = new HBox();
-        if(label.equals(LABEL_CLANS)){
+        Button btnExport = new Button("Exportar");
+        addOnActionBtnExport(btnExport, data, label);
+        btnExport.setDisable(true);
+        CheckBox cbZip = new CheckBox("Comprimirlo");
+        cbZip.setDisable(true);
+        if(label.equals(Constants.LABEL_CLANS)){
             input.setPromptText("Buscar en nombre o tag");
             ComboBox<WarFrequencyStructure> cmb = new ComboBox<>();
             for (WarFrequencyStructure wf : Constants.WAR_FRECUENCY) {
@@ -506,30 +588,21 @@ public class ClanController implements Initializable {
             }
             cmb.getSelectionModel().selectFirst();
             cmb.setDisable(true);
-            hbox.getChildren().addAll(input, cmb);
+            hbox.getChildren().addAll(input, cmb, btnExport, cbZip);
             HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
-        }else{
+        }else if(label.equals(Constants.LABEL_LOCATIONS)){
             input.setPromptText("Buscar en nombre o código de pais");
             ComboBox<String> cmb = new ComboBox<>();
             cmb.getItems().addAll("Filtrar por Es país?", "Si", "No");
             cmb.getSelectionModel().selectFirst();
             cmb.setDisable(true);
-            hbox.getChildren().addAll(input, cmb);
+            hbox.getChildren().addAll(input, cmb, btnExport, cbZip);
             HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
         }
         hbox.setPadding(new Insets(20, 10, 10, 10));
         hbox.setAlignment(Pos.CENTER);
         HBox.setMargin(input, new Insets(0, 10, 0, 0));
+        HBox.setMargin(btnExport, new Insets(0, 10, 0, 60));
         return hbox;
-    }
-
-    public void addSelectEvent(TableView<Location> tableView) {
-        tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                lblCountrySelected.setText(newSelection.getName());
-                selectedLocationId = newSelection.getId() + Constants.DIFFERENCE;
-                btnGetRanking.setDisable(false);
-            }
-        });
     }
 }
