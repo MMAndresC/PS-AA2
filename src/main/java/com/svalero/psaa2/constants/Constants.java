@@ -7,6 +7,7 @@ public class Constants {
 
     public static final String BASE_URL = "https://api.clashofclans.com/v1/";
     public static final String CR_URL = "https://api.clashroyale.com/v1/";
+    public static final String WEBFLUX_URL = "http://localhost:8081/api/top-ranking/";
 
     public final static int LIMIT = 30; //Max de la API 60
     public final static int LIMIT_RANKING = 10;
@@ -31,4 +32,6 @@ public class Constants {
     public final static String LABEL_LOCATIONS = "Localizaciones";
 
     public final static String LABEL_RANKING = "Rankings";
+
+    public final static String LABEL_TOP_CLAN = "Top Clan";
 }

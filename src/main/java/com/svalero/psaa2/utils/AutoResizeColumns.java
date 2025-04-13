@@ -9,7 +9,7 @@ public class AutoResizeColumns {
     public static void autoResizeColumns(TableView<?> tableView) {
         tableView.getColumns().forEach(column -> {
             // Not adjust badgeColumn, not contains text
-            if(column.getText().equals("Placa")) return;
+            if(column.getText().equals("Placa") || column.getText().equals("Liga")) return;
             Text tempText = new Text(column.getText());
             double max = tempText.getLayoutBounds().getWidth();
 
