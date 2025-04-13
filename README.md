@@ -17,4 +17,8 @@ Para utilizar la funcionalidad de búsqueda de TOP 10 de cada país en el Clash 
   
 La aplicación busca la API key en el archivo /env/ApiKey.java.  
 En ese mismo directorio está el archivo de ejemplo ApiKey_Example.java, copiar las API key al archivo de ejemplo y renombrarlo a ApiKey.   
-TOKEN es la API key del Clash of Clans y CR_TOKEN la del Clash Royale.
+TOKEN es la API key del Clash of Clans y CR_TOKEN la del Clash Royale.  
+  
+### Servicio webflux (Opción top clan) 
+  
+La opción top clan funciona con un servicio Webflux que esta en este [repositorio](https://github.com/MMAndresC/PS-AA2-webflux).
