@@ -2,14 +2,17 @@ package com.svalero.psaa2.controller;
 
 import com.svalero.psaa2.constants.Constants;
 import com.svalero.psaa2.constants.WarFrequencyStructure;
-import com.svalero.psaa2.domain.Clan;
-import com.svalero.psaa2.domain.Location;
-import com.svalero.psaa2.task.GetClansApiTask;
-import com.svalero.psaa2.task.GetLocationsApiTask;
+import com.svalero.psaa2.domain.*;
+import com.svalero.psaa2.domain.Label;
+import com.svalero.psaa2.task.*;
 import com.svalero.psaa2.utils.AutoResizeColumns;
+import com.svalero.psaa2.utils.CreateCsv;
 import com.svalero.psaa2.utils.ErrorLogger;
+import com.svalero.psaa2.utils.ZipFile;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -19,39 +22,61 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
+import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 public class ClanController implements Initializable {
 
     @FXML
     private TabPane tabPane;
 
-    private final String LABEL_CLANS = "Clanes";
+    @FXML
+    private javafx.scene.control.Label lbCountrySelected;
 
-    private final String LABEL_LOCATIONS = "Locations";
+    @FXML
+    private javafx.scene.control.Label lbCountrySelectedWebFlux;
+
+    @FXML
+    private Button btnGetRanking;
+
+    @FXML
+    private Button btnGetTopClan;
 
     private final List<String> attrAfterClans = new ArrayList<>();
 
     private final List<String> attrAfterLocations = new ArrayList<>();
 
+    private int selectedLocationId;
+
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {}
+
+    // ON ACTION BUTTONS
 
     public void onClickGetClans(){
         ObservableList<Clan> observableData = FXCollections.observableArrayList();
         // Create new table
-        TableView<Clan> tableView = createClanTableView(observableData);
+        TableView<Clan> tableView = createClanTableView();
         tableView.setItems(observableData);
         // Create new tab
-        Tab tab = createNewTab(tableView, LABEL_CLANS);
+        Tab tab = createNewTab(tableView, Constants.LABEL_CLANS, observableData);
         //Init task
         GetClansApiTask task = new GetClansApiTask(observableData, attrAfterClans);
         //Init thread
@@ -66,10 +91,11 @@ public class ClanController implements Initializable {
     public void onClickGetLocations(){
         ObservableList<Location> observableData = FXCollections.observableArrayList();
         // Create new table
-        TableView<Location> tableView = createLocationTableView(observableData);
+        TableView<Location> tableView = createLocationTableView();
         tableView.setItems(observableData);
+        addSelectEvent(tableView);
         // Create new tab
-        Tab tab = createNewTab(tableView, LABEL_LOCATIONS);
+        Tab tab = createNewTab(tableView, Constants.LABEL_LOCATIONS, observableData);
         //Init task
         GetLocationsApiTask task = new GetLocationsApiTask(observableData, attrAfterLocations);
         //Init thread
@@ -81,6 +107,43 @@ public class ClanController implements Initializable {
         thread.start();
     }
 
+    public void onClickGetRanking(){
+        ObservableList<ClashRoyaleClan> observableData = FXCollections.observableArrayList();
+        // Create new table
+        TableView<ClashRoyaleClan> tableView = createRankingTableView();
+        tableView.setItems(observableData);
+        // Create new tab
+        Tab tab = createNewTab(tableView, Constants.LABEL_RANKING, observableData);
+        //Init task
+        GetClashRoyalRankingTask task = new GetClashRoyalRankingTask(observableData, this.selectedLocationId);
+        //Init thread
+        Thread thread = new Thread(task);
+        // Control states of task
+        controlStatesRankingTask(task, tableView, tab);
+        //Close thread if app closes
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    public void onClickGetTopClanMembers(){
+        ObservableList<Member> observableData = FXCollections.observableArrayList();
+        // Create new table
+        TableView<Member> tableView = createMembersTableView();
+        tableView.setItems(observableData);
+        // Create new tab
+        Tab tab = createNewTab(tableView, Constants.LABEL_TOP_CLAN, observableData);
+        //Init task
+        WebfluxTask task = new WebfluxTask(observableData, this.selectedLocationId - Constants.DIFFERENCE);
+        //Init thread
+        Thread thread = new Thread(task);
+        // Control states of task
+        controlStatesTopClanTask(task, tableView, tab);
+        //Close thread if app closes
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    // CONTROL STATES TASK
 
     private void controlStatesClanTask(
             GetClansApiTask task,
@@ -89,25 +152,25 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            tab.setText(LABEL_CLANS + " ✅");
+            tab.setText(Constants.LABEL_CLANS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
             for( Node component : searchFilterBar.getChildren()){
                 component.setDisable(false);
             }
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+            ComboBox<WarFrequencyStructure> cmb = (ComboBox) searchFilterBar.getChildren().get(1);
 
-            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, LABEL_CLANS, cmb);
+            FilteredList<Clan> filteredData = addChangeEventListener(observableData, input, Constants.LABEL_CLANS, cmb);
 
             tableView.setItems(filteredData);
 
-            AutoResizeColumns.autoResize(tableView);
+            AutoResizeColumns.autoResizeColumns(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing clans");
-            tab.setText(LABEL_CLANS + " ⛔");
+            tab.setText(Constants.LABEL_CLANS + " ⛔");
         });
     }
 
@@ -118,28 +181,83 @@ public class ClanController implements Initializable {
             Tab tab
     ){
         task.setOnSucceeded(event -> {
-            tab.setText(LABEL_LOCATIONS + " ✅");
+            tab.setText(Constants.LABEL_LOCATIONS + " ✅");
             // Set active search and filter
             HBox searchFilterBar = (HBox) ((VBox) tab.getContent()).getChildren().getFirst();
             for( Node component : searchFilterBar.getChildren()){
                 component.setDisable(false);
             }
+
             TextField input = (TextField) searchFilterBar.getChildren().getFirst();
-            ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().getLast();
+            ComboBox<String> cmb = (ComboBox) searchFilterBar.getChildren().get(1);
 
             // Link tableView to filtered data
-            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, LABEL_LOCATIONS, cmb);
+            FilteredList<Location> filteredData = addChangeEventListener(observableData, input, Constants.LABEL_LOCATIONS, cmb);
 
             tableView.setItems(filteredData);
 
-            AutoResizeColumns.autoResize(tableView);
+            AutoResizeColumns.autoResizeColumns(tableView);
         });
         //Task ends before complete sending
         task.setOnFailed(event -> {
             ErrorLogger.log("Failed listing locations");
-            tab.setText(LABEL_LOCATIONS + " ⛔");
+            tab.setText(Constants.LABEL_LOCATIONS + " ⛔");
         });
     }
+
+    private void controlStatesRankingTask(
+            GetClashRoyalRankingTask task,
+            TableView<ClashRoyaleClan> tableView,
+            Tab tab
+    ){
+        task.setOnSucceeded(event -> {
+            tab.setText(Constants.LABEL_RANKING + " ✅");
+            AutoResizeColumns.autoResizeColumns(tableView);
+        });
+        //Task ends before complete sending
+        task.setOnFailed(event -> {
+            ErrorLogger.log("Failed listing locations");
+            tab.setText(Constants.LABEL_RANKING + " ⛔");
+        });
+    }
+
+    private void controlStatesTopClanTask(
+            WebfluxTask task,
+            TableView<Member> tableView,
+            Tab tab
+    ){
+        task.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                VBox vBox= (VBox) tab.getContent();
+                HBox hBox = (HBox) vBox.getChildren().getFirst();
+                javafx.scene.control.Label lbData = (javafx.scene.control.Label) hBox.lookup("#lbClanData");
+                ImageView imageView = (ImageView) hBox.lookup("#imgClanBadge");
+                System.out.println(newVal.getBadgeUrl());
+                ShowImagesTask imgTask = new ShowImagesTask(newVal.getBadgeUrl());
+                new Thread(imgTask).start();
+                String textData = newVal.getClanName() + ", Ranking temporada pasada: " + newVal.getPreviousRank();
+                Platform.runLater(() -> {
+                    try{
+                        lbData.setText(textData);
+                        imgTask.setOnSucceeded(event -> imageView.setImage(imgTask.getValue()));
+                    }catch (Exception e){
+                        ErrorLogger.log(e.getMessage());
+                    }
+                });
+            }
+        });
+        task.setOnSucceeded(event -> {
+            tab.setText(Constants.LABEL_TOP_CLAN + " ✅");
+            AutoResizeColumns.autoResizeColumns(tableView);
+        });
+        //Task ends before complete sending
+        task.setOnFailed(event -> {
+            ErrorLogger.log("Failed listing locations");
+            tab.setText(Constants.LABEL_RANKING + " ⛔");
+        });
+    }
+
+    // EVENT LISTENERS
 
     /**
      * Add change event listener to textField to search in tableView
@@ -169,7 +287,7 @@ public class ClanController implements Initializable {
                 boolean matchesFilter = true;
 
                 // Clan tableView data
-                if(label.equals(LABEL_CLANS)){
+                if(label.equals(Constants.LABEL_CLANS)){
                     Clan clan = (Clan) item;
                     // Check if searchText is in clan name or tag
                     if(!searchText.isBlank()){
@@ -184,7 +302,7 @@ public class ClanController implements Initializable {
                     }
 
                 // Locations tableView data
-                }else if(label.equals(LABEL_LOCATIONS)){
+                }else if(label.equals(Constants.LABEL_LOCATIONS)){
                     Location location = (Location) item;
                     // Check if searchText is in location name or countryCode if exist
                     if(!searchText.isBlank()){
@@ -211,10 +329,89 @@ public class ClanController implements Initializable {
         return filteredData;
     }
 
+    public void addSelectEvent(TableView<Location> tableView) {
+        tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                lbCountrySelected.setText(newSelection.getName());
+                lbCountrySelectedWebFlux.setText(newSelection.getName());
+                selectedLocationId = newSelection.getId() + Constants.DIFFERENCE;
+                btnGetRanking.setDisable(false);
+                btnGetTopClan.setDisable(false);
+            }
+        });
+    }
 
+    public <T> void addOnActionBtnExport(Button btnExport, ObservableList<T> data, String label) {
+        btnExport.setOnAction(event -> {
+            // Choose directory to save csv file
+            Stage stage = (Stage) btnExport.getScene().getWindow();
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            String basePath = System.getProperty("user.home");
+            File initialDirectory = new File(basePath);
+            if (initialDirectory.exists()) {
+                directoryChooser.setInitialDirectory(initialDirectory);
+            }
+            File selectedDirectory = directoryChooser.showDialog(stage);
+            if (selectedDirectory != null) {
+                // create csv file & zip if option is selected
+              CompletableFuture
+                      .supplyAsync(() -> {
+
+                          // Get if checkbox is checked, option to zip csv
+                          HBox container = (HBox) btnExport.getParent();
+                          CheckBox cbZip = (CheckBox) container.getChildren().getLast();
+                          boolean selectedZip = cbZip.isSelected();
+
+                          // Create file path
+                          long millis = System.currentTimeMillis();
+                          String separator = File.separator;
+                          String filename = separator + label + "_" + millis + ".csv";
+                          String filePath = selectedDirectory.getAbsolutePath() + filename;
+
+                          try {
+                              // Create csv
+                              File csvFile;
+                              if (data.get(0) instanceof Clan)
+                                  csvFile = CreateCsv.exportClan((ObservableList<Clan>) data, filePath);
+                              else
+                                  csvFile = CreateCsv.exportLocation((ObservableList<Location>) data, filePath);
+
+                              if (!selectedZip) return csvFile;
+
+                              //Create zip csv
+                              File zipFile = ZipFile.zip(csvFile);
+                              csvFile.delete();
+
+                              return zipFile;
+                          } catch (IOException e) {
+                              ErrorLogger.log(e.getMessage());
+                              return null;
+                          }
+                      })
+                      .thenAccept(file -> {
+                          Platform.runLater(() -> {
+                              try {
+                                  Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                                  alert.setHeaderText("Notificacion");
+                                  alert.setContentText("Datos exportados en el archivo " + file.getName());
+                                  alert.show();
+                              } catch (Exception e) {
+                                  ErrorLogger.log(e.getMessage());
+                              }
+                          });
+                      })
+                      .exceptionally(ex -> {
+                          ErrorLogger.log(ex.getMessage());
+                          return null;
+                      });
+            }
+        });
+    }
+
+    //UI
 
     //Generic type T to wrap both types of tableView
-    public <T> Tab createNewTab(TableView<T> tableView, String label) {
+    public <T> Tab createNewTab(TableView<T> tableView, String label, ObservableList<T> data) {
         ScrollPane scrollPane = new ScrollPane(tableView);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
@@ -222,8 +419,35 @@ public class ClanController implements Initializable {
 
         Tab tab = new Tab(label + " ⌛");
 
-        HBox searchFilterBar = createSearchAndFilter(label);
-        VBox container = new VBox(10,searchFilterBar, scrollPane);
+        VBox container;
+
+        if(label.equals(Constants.LABEL_RANKING)){
+            javafx.scene.control.Label lbCountry = new javafx.scene.control.Label(this.lbCountrySelected.getText());
+            lbCountry.setStyle("-fx-font-size: 18px;");
+            HBox hbox = new HBox(lbCountry);
+            hbox.setPadding(new Insets(20, 10, 10, 10));
+            hbox.setAlignment(Pos.CENTER);
+            container = new VBox(10,hbox, scrollPane);
+        }else if(label.equals(Constants.LABEL_TOP_CLAN)){
+            javafx.scene.control.Label lbData = new javafx.scene.control.Label();
+            lbData.setStyle("-fx-font-size: 18px;");
+            lbData.setId("lbClanData");
+            String lbText = "TOP 1 " + this.lbCountrySelected.getText();
+            javafx.scene.control.Label lbCountry = new javafx.scene.control.Label(lbText);
+            lbCountry.setStyle("-fx-font-size: 18px;");
+            ImageView imageView = new ImageView();
+            imageView.setFitWidth(30);
+            imageView.setPreserveRatio(true);
+            imageView.setId("imgClanBadge");
+            HBox hBox = new HBox(10, lbCountry, imageView, lbData);
+            hBox.setPadding(new Insets(20, 10, 10, 10));
+            hBox.setAlignment(Pos.CENTER);
+            container = new VBox(10, hBox, scrollPane);
+        }else{
+            HBox searchFilterBar = createSearchAndFilter(label, data);
+            container = new VBox(10,searchFilterBar, scrollPane);
+        }
+
         // Set components attributes to growth to expand all height
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
         tableView.setPrefHeight(Region.USE_COMPUTED_SIZE);
@@ -235,7 +459,7 @@ public class ClanController implements Initializable {
         return tab;
     }
 
-    private TableView<Location> createLocationTableView(ObservableList<Location> observableLocations){
+    private TableView<Location> createLocationTableView(){
         TableView<Location> tableView = new TableView<>();
 
         TableColumn<Location, Integer> idColumn = new TableColumn<>("ID");
@@ -258,10 +482,12 @@ public class ClanController implements Initializable {
        return tableView;
     }
 
-    private TableView<Clan> createClanTableView(ObservableList<Clan> observableClans){
+    private TableView<Clan> createClanTableView(){
         TableView<Clan> tableView = new TableView<>();
 
-        //
+        // Column with badge image
+        TableColumn<Clan, ImageView> badgeColumn = getClanBadgeImageViewColumn();
+
         TableColumn<Clan, String> nameColumn = new TableColumn<>("Nombre");
         nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
 
@@ -316,7 +542,10 @@ public class ClanController implements Initializable {
             return new ReadOnlyStringWrapper(chatLanguage);
         });
 
+        TableColumn<Clan, HBox> labelsColumn = getClanLabelsTableColumn();
+
         //Set columns in table
+        tableView.getColumns().add(badgeColumn);
         tableView.getColumns().add(nameColumn);
         tableView.getColumns().add(tagColumn);
         tableView.getColumns().add(membersColumn);
@@ -329,16 +558,172 @@ public class ClanController implements Initializable {
         tableView.getColumns().add(warTiesColumn);
         tableView.getColumns().add(warLossesColumn);
         tableView.getColumns().add(chatLanguageColumn);
+        tableView.getColumns().add(labelsColumn);
 
         return tableView;
     }
 
-    public HBox createSearchAndFilter(String label) {
+    private TableView<ClashRoyaleClan> createRankingTableView(){
+        TableView<ClashRoyaleClan> tableView = new TableView<>();
+
+        TableColumn<ClashRoyaleClan, String> nameColumn = new TableColumn<>("Nombre");
+        nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
+
+        TableColumn<ClashRoyaleClan, String> tagColumn = new TableColumn<>("Tag");
+        tagColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getTag()));
+
+        TableColumn<ClashRoyaleClan, Integer> rankColumn = new TableColumn<>("Rank");
+        rankColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getRank()));
+
+        TableColumn<ClashRoyaleClan, Integer> previousRankColumn = new TableColumn<>("Anterior Rank");
+        previousRankColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getPreviousRank()));
+
+        TableColumn<ClashRoyaleClan, Integer> clanScoreColumn = new TableColumn<>("Puntuación");
+        clanScoreColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getClanScore()));
+
+        TableColumn<ClashRoyaleClan, Integer> membersColumn = new TableColumn<>("Nº miembros");
+        membersColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getMembers()));
+
+        tableView.getColumns().add(nameColumn);
+        tableView.getColumns().add(tagColumn);
+        tableView.getColumns().add(rankColumn);
+        tableView.getColumns().add(previousRankColumn);
+        tableView.getColumns().add(clanScoreColumn);
+        tableView.getColumns().add(membersColumn);
+
+        return tableView;
+    }
+
+    private TableView<Member> createMembersTableView(){
+        TableView<Member> tableView = new TableView<>();
+
+        TableColumn<Member, ImageView> leagueBadgeColumn = getLeagueBadgeImageViewColumn();
+
+        TableColumn<Member, String> nameColumn = new TableColumn<>("Nombre");
+        nameColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
+
+        TableColumn<Member, String> tagColumn = new TableColumn<>("Tag");
+        tagColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getTag()));
+
+        TableColumn<Member, String> roleColumn = new TableColumn<>("Rol");
+        roleColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getRole()));
+
+        TableColumn<Member, Integer> clanRankColumn = new TableColumn<>("Clan Rank");
+        clanRankColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getClanRank()));
+
+        TableColumn<Member, Integer> trophiesColumn = new TableColumn<>("Trofeos");
+        trophiesColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getTrophies()));
+
+        TableColumn<Member, Integer> donationsColumn = new TableColumn<>("Donaciones");
+        donationsColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getDonations()));
+
+        TableColumn<Member, Integer> donationsReceivedColumn = new TableColumn<>("Donaciones recibidas");
+        donationsReceivedColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getDonationsReceived()));
+
+        TableColumn<Member, Integer> expLevelColumn = new TableColumn<>("Nivel experiencía");
+        expLevelColumn.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getExpLevel()));
+
+        tableView.getColumns().add(clanRankColumn);
+        tableView.getColumns().add(nameColumn);
+        tableView.getColumns().add(tagColumn);
+        tableView.getColumns().add(roleColumn);
+        tableView.getColumns().add(leagueBadgeColumn);
+        tableView.getColumns().add(trophiesColumn);
+        tableView.getColumns().add(expLevelColumn);
+        tableView.getColumns().add(donationsColumn);
+        tableView.getColumns().add(donationsReceivedColumn);
+
+        return tableView;
+    }
+
+    @NotNull
+    private TableColumn<Clan, ImageView> getClanBadgeImageViewColumn() {
+        TableColumn<Clan, ImageView> badgeColumn = new TableColumn<>("Placa");
+        badgeColumn.setCellValueFactory(cellData -> {
+            String url = cellData.getValue().getBadgeUrls().getSmall();
+            ImageView imageView = new ImageView();
+            imageView.setFitWidth(30);
+            imageView.setPreserveRatio(true);
+            //Task to download and get image to set in imageView
+            ShowImagesTask task = new ShowImagesTask(url);
+            task.setOnSucceeded(event -> imageView.setImage(task.getValue()));
+            task.setOnFailed(event -> {
+                ErrorLogger.log(task.getException().getMessage());
+                // Load default image
+                InputStream defaultImage = getClass().getResourceAsStream("/assets/default_badge.png");
+                if(defaultImage != null){
+                    Image image = new Image(defaultImage);
+                    imageView.setImage(image);
+                }
+            });
+            Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            thread.start();
+
+            return new SimpleObjectProperty<>(imageView);
+        });
+        badgeColumn.setPrefWidth(40);
+        return badgeColumn;
+    }
+
+    @NotNull
+    private TableColumn<Member, ImageView> getLeagueBadgeImageViewColumn() {
+        TableColumn<Member, ImageView> leagueBadgeColumn = new TableColumn<>("Liga");
+        leagueBadgeColumn.setCellValueFactory(cellData -> {
+            String url = cellData.getValue().getLeague().getIconUrls().getSmall();
+            ImageView imageView = new ImageView();
+            imageView.setFitWidth(30);
+            imageView.setPreserveRatio(true);
+            //Task to download and get image to set in imageView
+            ShowImagesTask task = new ShowImagesTask(url);
+            task.setOnSucceeded(event -> imageView.setImage(task.getValue()));
+            Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            thread.start();
+
+            return new SimpleObjectProperty<>(imageView);
+        });
+        leagueBadgeColumn.setPrefWidth(40);
+        return leagueBadgeColumn;
+    }
+
+    @NotNull
+    private TableColumn<Clan, HBox> getClanLabelsTableColumn() {
+        TableColumn<Clan, HBox> labelsColumn = new TableColumn<>("Etiquetas");
+        labelsColumn.setCellValueFactory(cellData -> {
+            List<Label> labels = cellData.getValue().getLabels();
+            HBox hBox = new HBox();
+            labels.forEach(label -> {
+                String url = label.getIconUrls().getSmall();
+                if(url.isBlank()) return;
+                ImageView imageView = new ImageView();
+                imageView.setFitWidth(30);
+                imageView.setPreserveRatio(true);
+                ShowImagesTask task = new ShowImagesTask(url);
+                task.setOnSucceeded(event -> {
+                    imageView.setImage(task.getValue());
+                    hBox.getChildren().add(imageView);
+                });
+                Thread thread = new Thread(task);
+                thread.setDaemon(true);
+                thread.start();
+            });
+            return new SimpleObjectProperty<>(hBox);
+        });
+        return labelsColumn;
+    }
+
+    public <T> HBox createSearchAndFilter(String label, ObservableList<T> data) {
         TextField input = new TextField();
         input.setDisable(true);
         input.setMinWidth(250);
         HBox hbox = new HBox();
-        if(label.equals(LABEL_CLANS)){
+        Button btnExport = new Button("Exportar");
+        addOnActionBtnExport(btnExport, data, label);
+        btnExport.setDisable(true);
+        CheckBox cbZip = new CheckBox("Comprimirlo");
+        cbZip.setDisable(true);
+        if(label.equals(Constants.LABEL_CLANS)){
             input.setPromptText("Buscar en nombre o tag");
             ComboBox<WarFrequencyStructure> cmb = new ComboBox<>();
             for (WarFrequencyStructure wf : Constants.WAR_FRECUENCY) {
@@ -346,20 +731,21 @@ public class ClanController implements Initializable {
             }
             cmb.getSelectionModel().selectFirst();
             cmb.setDisable(true);
-            hbox.getChildren().addAll(input, cmb);
+            hbox.getChildren().addAll(input, cmb, btnExport, cbZip);
             HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
-        }else{
+        }else if(label.equals(Constants.LABEL_LOCATIONS)){
             input.setPromptText("Buscar en nombre o código de pais");
             ComboBox<String> cmb = new ComboBox<>();
             cmb.getItems().addAll("Filtrar por Es país?", "Si", "No");
             cmb.getSelectionModel().selectFirst();
             cmb.setDisable(true);
-            hbox.getChildren().addAll(input, cmb);
+            hbox.getChildren().addAll(input, cmb, btnExport, cbZip);
             HBox.setMargin(cmb, new Insets(0, 0, 0, 10));
         }
         hbox.setPadding(new Insets(20, 10, 10, 10));
         hbox.setAlignment(Pos.CENTER);
         HBox.setMargin(input, new Insets(0, 10, 0, 0));
+        HBox.setMargin(btnExport, new Insets(0, 10, 0, 60));
         return hbox;
     }
 }

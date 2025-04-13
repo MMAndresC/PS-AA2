@@ -6,7 +6,11 @@ import java.util.List;
 public class Constants {
 
     public static final String BASE_URL = "https://api.clashofclans.com/v1/";
-    public final static int LIMIT = 60; //Max de la API 60
+    public static final String CR_URL = "https://api.clashroyale.com/v1/";
+    public static final String WEBFLUX_URL = "http://localhost:8081/api/top-ranking/";
+
+    public final static int LIMIT = 30; //Max de la API 60
+    public final static int LIMIT_RANKING = 10;
 
     public final static int LOCATION_ID_SPAIN = 32000218;
 
@@ -19,4 +23,15 @@ public class Constants {
             new WarFrequencyStructure("lessThanOncePerWeek", "Menos que una vez por semana"),
             new WarFrequencyStructure("never", "Nunca")
     );
+
+    //Clash royal locationId - Clash of clans LocationId, difference between locationId of same countries
+    public final static int DIFFERENCE = 25000000;
+
+    public final static String LABEL_CLANS = "Clanes";
+
+    public final static String LABEL_LOCATIONS = "Localizaciones";
+
+    public final static String LABEL_RANKING = "Rankings";
+
+    public final static String LABEL_TOP_CLAN = "Top Clan";
 }

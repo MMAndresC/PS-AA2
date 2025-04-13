@@ -1,7 +1,5 @@
 package com.svalero.psaa2.service;
 
-import com.svalero.psaa2.constants.Constants;
-import com.svalero.psaa2.env.ApiKey;
 import com.svalero.psaa2.utils.ErrorLogger;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -11,19 +9,23 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import okhttp3.Request;
 
-public class ClashOfClansApiService {
+import java.util.HashMap;
+import java.util.Map;
 
-    private static Retrofit retrofit = null;
+public class ApiService {
 
-    public static Retrofit getInstance(){
-        if(retrofit == null) {
+    // Create instance per api and only one of each
+    private static final Map<String, Retrofit> retrofitInstances = new HashMap<>();
+
+    public static Retrofit getInstance(String token, String url){
+        if (!retrofitInstances.containsKey(url)) {
 
             OkHttpClient okHttpClient = new OkHttpClient.Builder()
                     .addInterceptor(chain -> {
                         Request original = chain.request();
                         Request.Builder requestBuilder = original.newBuilder()
                                 // Add token in all requests
-                                .header("Authorization", ApiKey.TOKEN)
+                                .header("Authorization", token)
                                 .method(original.method(), original.body());
 
                         Request request = requestBuilder.build();
@@ -44,13 +46,15 @@ public class ClashOfClansApiService {
                     .setLenient()
                     .create();
 
-            retrofit = new Retrofit.Builder()
-                    .baseUrl(Constants.BASE_URL)
+            Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl(url)
                     .client(okHttpClient)
                     .addConverterFactory(GsonConverterFactory.create(gson))
                     .addCallAdapterFactory(RxJava3CallAdapterFactory.create())
                     .build();
+
+            retrofitInstances.put(url, retrofit);
         }
-        return retrofit;
+        return retrofitInstances.get(url);
     }
 }

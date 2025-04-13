@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiResponseClans {
-    private List<Clan> items;
+public class ApiResponseClashRoyaleClan {
+    private List<ClashRoyaleClan> items;
     private Paging paging;
 }

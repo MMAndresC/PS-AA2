@@ -5,8 +5,11 @@ import javafx.scene.text.Text;
 
 public class AutoResizeColumns {
 
-    public static void autoResize(TableView<?> tableView) {
+    //Check header and all texts of a column and adjust to max length
+    public static void autoResizeColumns(TableView<?> tableView) {
         tableView.getColumns().forEach(column -> {
+            // Not adjust badgeColumn, not contains text
+            if(column.getText().equals("Placa") || column.getText().equals("Liga")) return;
             Text tempText = new Text(column.getText());
             double max = tempText.getLayoutBounds().getWidth();
 
@@ -20,8 +23,7 @@ public class AutoResizeColumns {
                     }
                 }
             }
-
-            column.setPrefWidth(max + 20); // Margen adicional para padding
+            column.setPrefWidth(max + 20);
         });
     }
 }
